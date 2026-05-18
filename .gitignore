@@ -1,0 +1,8 @@
+﻿node_modules/
+uploads/
+encrypted/
+quarantine/
+data/
+*.db
+*.enc
+.env

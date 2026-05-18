@@ -1,0 +1,9 @@
+node_modules
+npm-debug.log
+uploads/
+encrypted/
+quarantine/
+data/
+.env
+*.md
+.git

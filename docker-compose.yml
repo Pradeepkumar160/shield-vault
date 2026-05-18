@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # ── ShieldVault App ──────────────────────────────────────
+  app:
+    build: .
+    container_name: shield-vault-app
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - JWT_SECRET=shield_vault_jwt_super_secret_2024
+      - ENCRYPTION_KEY=12345678901234567890123456789012
+      - SIGNED_URL_SECRET=shield_vault_signed_url_secret_key
+      - WEBHOOK_URL=
+      - CLAMAV_HOST=clamav
+      - CLAMAV_PORT=3310
+    volumes:
+      - shield-uploads:/app/uploads
+      - shield-encrypted:/app/encrypted
+      - shield-quarantine:/app/quarantine
+      - shield-data:/app/data
+    depends_on:
+      clamav:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - shield-net
+
+  # ── ClamAV Virus Scanner ─────────────────────────────────
+  clamav:
+    image: clamav/clamav:stable
+    container_name: shield-clamav
+    ports:
+      - "3310:3310"
+    environment:
+      - CLAMD_CONF_MaxFileSize=20M
+      - CLAMD_CONF_MaxScanSize=20M
+    volumes:
+      - clamav-db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - shield-net
+
+volumes:
+  shield-uploads:
+  shield-encrypted:
+  shield-quarantine:
+  shield-data:
+  clamav-db:
+
+networks:
+  shield-net:
+    driver: bridge

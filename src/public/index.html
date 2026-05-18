@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShieldVault — Secure File Scanner</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --border: #30363d;
+      --accent: #238636;
+      --accent-hover: #2ea043;
+      --blue: #1f6feb;
+      --red: #da3633;
+      --yellow: #9e6a03;
+      --yellow-bg: #161b00;
+      --green: #3fb950;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --text3: #6e7681;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+    /* NAV */
+    nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
+    .nav-brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .nav-brand svg { width: 28px; height: 28px; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .badge-scanner { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+    .badge-online { background: #0d2d13; color: var(--green); border: 1px solid #2ea043; }
+    .badge-demo { background: #2d1b00; color: #f0883e; border: 1px solid #9e6a03; }
+    .btn-logout { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 13px; transition: all .15s; }
+    .btn-logout:hover { border-color: var(--red); color: var(--red); }
+    .nav-user { color: var(--text2); font-size: 13px; }
+
+    /* LAYOUT */
+    .layout { display: flex; min-height: calc(100vh - 60px); }
+    aside { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); padding: 16px 0; flex-shrink: 0; }
+    .sidebar-link { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: var(--text2); text-decoration: none; font-size: 14px; cursor: pointer; border-left: 3px solid transparent; transition: all .15s; }
+    .sidebar-link:hover, .sidebar-link.active { background: var(--bg3); color: var(--text); border-left-color: var(--blue); }
+    .sidebar-link svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .sidebar-section { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; padding: 16px 20px 6px; }
+    main { flex: 1; padding: 28px; overflow: auto; }
+
+    /* AUTH */
+    .auth-wrapper { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+    .auth-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; }
+    .auth-logo { text-align: center; margin-bottom: 28px; }
+    .auth-logo h1 { font-size: 22px; margin-top: 10px; }
+    .auth-logo p { color: var(--text2); font-size: 13px; margin-top: 4px; }
+    .auth-tabs { display: flex; background: var(--bg3); border-radius: var(--radius); padding: 4px; margin-bottom: 24px; }
+    .auth-tab { flex: 1; text-align: center; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 14px; color: var(--text2); transition: all .15s; }
+    .auth-tab.active { background: var(--bg2); color: var(--text); }
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+    input[type=text], input[type=password] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; transition: border .15s; }
+    input:focus { border-color: var(--blue); }
+    .btn-primary { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); padding: 11px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .auth-hint { text-align: center; margin-top: 16px; font-size: 12px; color: var(--text3); }
+
+    /* ALERTS */
+    .alert { padding: 12px 16px; border-radius: var(--radius); font-size: 14px; margin-bottom: 16px; display: none; }
+    .alert.show { display: block; }
+    .alert-error { background: #2d0f0f; border: 1px solid var(--red); color: #ff7b72; }
+    .alert-success { background: #0d2d13; border: 1px solid #2ea043; color: #3fb950; }
+    .alert-warn { background: #2d1b00; border: 1px solid #9e6a03; color: #f0883e; }
+
+    /* STAT CARDS */
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .stat-label { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+    .stat-value { font-size: 32px; font-weight: 700; margin-top: 4px; }
+    .stat-value.green { color: var(--green); }
+    .stat-value.red { color: #ff7b72; }
+    .stat-value.blue { color: #79c0ff; }
+    .stat-value.yellow { color: #f0883e; }
+    .stat-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
+
+    /* PAGE TITLE */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .page-title { font-size: 20px; font-weight: 700; }
+    .page-sub { color: var(--text2); font-size: 13px; margin-top: 2px; }
+
+    /* UPLOAD ZONE */
+    .upload-zone { background: var(--bg2); border: 2px dashed var(--border); border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all .2s; margin-bottom: 20px; }
+    .upload-zone:hover, .upload-zone.dragover { border-color: var(--blue); background: #0d1a2e; }
+    .upload-zone svg { width: 48px; height: 48px; color: var(--text3); margin-bottom: 12px; }
+    .upload-zone h3 { font-size: 16px; margin-bottom: 6px; }
+    .upload-zone p { font-size: 13px; color: var(--text2); }
+    .upload-zone input[type=file] { display: none; }
+    .upload-progress { background: var(--bg3); border-radius: 4px; height: 6px; margin-top: 16px; overflow: hidden; display: none; }
+    .upload-progress-bar { height: 100%; background: var(--blue); transition: width .3s; border-radius: 4px; }
+    .upload-result { background: var(--bg3); border-radius: var(--radius); padding: 16px; margin-top: 16px; display: none; font-size: 13px; }
+    .upload-result pre { background: var(--bg); border-radius: 6px; padding: 12px; overflow-x: auto; font-size: 12px; margin-top: 10px; color: var(--green); }
+
+    /* TABLE */
+    .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: var(--bg3); color: var(--text2); font-weight: 600; padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    .empty-row { text-align: center; color: var(--text3); padding: 40px; }
+
+    /* STATUS BADGES */
+    .status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .status-clean { background: #0d2d13; color: var(--green); border: 1px solid #2ea043; }
+    .status-infected { background: #2d0f0f; color: #ff7b72; border: 1px solid var(--red); }
+    .status-scanning { background: #0d1a2e; color: #79c0ff; border: 1px solid var(--blue); }
+    .status-error { background: #2d1b00; color: #f0883e; border: 1px solid #9e6a03; }
+
+    /* BUTTONS */
+    .btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; cursor: pointer; transition: all .15s; color: var(--text2); background: var(--bg3); }
+    .btn:hover { color: var(--text); border-color: var(--text3); }
+    .btn-danger { border-color: var(--red); color: #ff7b72; }
+    .btn-danger:hover { background: #2d0f0f; }
+    .btn-link { border-color: var(--blue); color: #79c0ff; }
+    .btn-link:hover { background: #0d1a2e; }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    /* ACTIVITY LOG */
+    .activity-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .dot-upload { background: var(--blue); }
+    .dot-encrypted { background: #bc8cff; }
+    .dot-scanned { background: var(--green); }
+    .dot-quarantined { background: var(--red); }
+    .dot-ready { background: var(--green); }
+    .dot-error { background: #f0883e; }
+    .dot-deleted { background: var(--text3); }
+    .activity-content { flex: 1; }
+    .activity-event { font-size: 13px; font-weight: 600; }
+    .activity-detail { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .activity-time { font-size: 11px; color: var(--text3); }
+
+    /* MODAL */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; z-index: 200; }
+    .modal-backdrop.show { display: flex; }
+    .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 28px; width: 90%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 20px; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .info-row { display: flex; border-bottom: 1px solid var(--border); padding: 10px 0; font-size: 13px; }
+    .info-row:last-child { border-bottom: none; }
+    .info-key { color: var(--text2); width: 140px; flex-shrink: 0; }
+    .info-val { color: var(--text); word-break: break-all; }
+
+    /* SPINNER */
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* PAGES */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* COPY BUTTON */
+    .copy-url { display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; font-size: 12px; margin-top: 8px; }
+    .copy-url span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text2); }
+    .copy-url button { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; flex-shrink: 0; }
+    .copy-url button:hover { color: var(--text); }
+
+    @media (max-width: 700px) {
+      aside { display: none; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- AUTH PAGE -->
+<div id="authPage" class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <rect width="48" height="48" rx="12" fill="#161b22"/>
+        <path d="M24 8L10 14v10c0 8.4 5.9 16.2 14 18.4C32.1 40.2 38 32.4 38 24V14L24 8z" fill="#238636" opacity=".3"/>
+        <path d="M24 12L14 17v7c0 5.8 4.1 11.2 10 12.7 5.9-1.5 10-6.9 10-12.7v-7L24 12z" fill="#238636" opacity=".6"/>
+        <path d="M21 24l2 2 5-5" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h1>ShieldVault</h1>
+      <p>Secure File Upload &amp; Virus Scanner</p>
+    </div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('login')">Sign In</div>
+      <div class="auth-tab" onclick="switchTab('register')">Register</div>
+    </div>
+
+    <div id="authAlert" class="alert alert-error"></div>
+
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="loginUser" placeholder="admin" value="admin" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="••••••••" value="admin123" />
+      </div>
+      <button class="btn-primary" onclick="doLogin()" id="loginBtn">Sign In</button>
+      <p class="auth-hint">Default: admin / admin123</p>
+    </div>
+
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="regUser" placeholder="your_username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPass" placeholder="Min 6 characters" />
+      </div>
+      <button class="btn-primary" onclick="doRegister()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until login) -->
+<div id="appPage" style="display:none">
+  <nav>
+    <a class="nav-brand" href="#">
+      <svg viewBox="0 0 48 48" fill="none">
+        <path d="M24 4L8 11v12c0 10 7.2 19.3 16 21.6C32.8 42.3 40 33 40 23V11L24 4z" fill="#238636" opacity=".4"/>
+        <path d="M24 9L12 15v8c0 7 5 13.5 12 15.5C31 36.5 36 30 36 23v-8L24 9z" fill="#238636" opacity=".7"/>
+        <path d="M20 23l3 3 6-6" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      ShieldVault
+    </a>
+    <div class="nav-right">
+      <span id="scannerBadge" class="badge-scanner badge-demo">● Demo Mode</span>
+      <span class="nav-user" id="navUser"></span>
+      <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside>
+      <div class="sidebar-section">Navigation</div>
+      <a class="sidebar-link active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg>
+        Dashboard
+      </a>
+      <a class="sidebar-link" onclick="showPage('upload')" id="nav-upload">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Upload File
+      </a>
+      <a class="sidebar-link" onclick="showPage('files')" id="nav-files">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+        All Files
+      </a>
+      <a class="sidebar-link" onclick="showPage('activity')" id="nav-activity">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        Activity Log
+      </a>
+      <div class="sidebar-section" style="margin-top:12px">Info</div>
+      <a class="sidebar-link" onclick="showPage('about')" id="nav-about">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        About
+      </a>
+    </aside>
+
+    <main>
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Dashboard</div>
+            <div class="page-sub">Overview of your ShieldVault system</div>
+          </div>
+          <button class="btn" onclick="loadStats()">↻ Refresh</button>
+        </div>
+        <div class="stat-grid" id="statGrid">
+          <div class="stat-card"><div class="stat-label">Total Files</div><div class="stat-value blue" id="s-total">—</div></div>
+          <div class="stat-card"><div class="stat-label">Clean Files</div><div class="stat-value green" id="s-clean">—</div></div>
+          <div class="stat-card"><div class="stat-label">Infected / Quarantined</div><div class="stat-value red" id="s-infected">—</div></div>
+          <div class="stat-card"><div class="stat-label">Total Storage</div><div class="stat-value yellow" id="s-storage">—</div></div>
+        </div>
+        <div class="table-wrap">
+          <div style="padding:16px 16px 10px;border-bottom:1px solid var(--border);font-weight:600;font-size:14px;">Recent Activity</div>
+          <div id="activityMini" style="padding:0 16px 8px"></div>
+        </div>
+      </div>
+
+      <!-- UPLOAD -->
+      <div id="page-upload" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Upload File</div>
+            <div class="page-sub">Files are encrypted (AES-256) and scanned for viruses</div>
+          </div>
+        </div>
+        <div id="uploadAlert" class="alert"></div>
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" onchange="handleFileSelect(event)" />
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          <h3>Click or drop a file here</h3>
+          <p id="filePickerInfo">Supported: Images, PDF, TXT, CSV, ZIP, DOCX · Max 10MB</p>
+          <div class="upload-progress" id="uploadProgress">
+            <div class="upload-progress-bar" id="uploadBar" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="upload-result" id="uploadResult"></div>
+      </div>
+
+      <!-- FILES -->
+      <div id="page-files" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">All Files</div>
+            <div class="page-sub">Manage uploaded and scanned files</div>
+          </div>
+          <button class="btn" onclick="loadFiles()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Type</th>
+                <th>Size</th>
+                <th>Status</th>
+                <th>Uploaded</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="filesTbody">
+              <tr><td colspan="6" class="empty-row"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div id="page-activity" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Activity Log</div>
+            <div class="page-sub">Full event timeline across all files</div>
+          </div>
+          <button class="btn" onclick="loadStats()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap" style="padding:16px" id="activityFull"></div>
+      </div>
+
+      <!-- ABOUT -->
+      <div id="page-about" class="page">
+        <div class="page-header"><div><div class="page-title">About ShieldVault</div></div></div>
+        <div class="table-wrap" style="padding:24px;max-width:600px">
+          <h3 style="margin-bottom:16px;color:var(--green)">🛡️ ShieldVault v1.0</h3>
+          <p style="color:var(--text2);font-size:14px;line-height:1.6;margin-bottom:20px">
+            A production-grade secure file upload and virus scanning service. 
+            Every file is encrypted with AES-256-CBC before storage. ClamAV antivirus 
+            scans every upload and quarantines infected files automatically.
+          </p>
+          <div class="info-row"><div class="info-key">Framework</div><div class="info-val">Node.js + Express</div></div>
+          <div class="info-row"><div class="info-key">Encryption</div><div class="info-val">AES-256-CBC</div></div>
+          <div class="info-row"><div class="info-key">Virus Scanner</div><div class="info-val">ClamAV (via Docker)</div></div>
+          <div class="info-row"><div class="info-key">Auth</div><div class="info-val">JWT (24h expiry)</div></div>
+          <div class="info-row"><div class="info-key">Database</div><div class="info-val">SQLite (local)</div></div>
+          <div class="info-row"><div class="info-key">Download Links</div><div class="info-val">HMAC-SHA256 Signed URLs (1h)</div></div>
+          <div class="info-row"><div class="info-key">Max File Size</div><div class="info-val">10 MB</div></div>
+          <div class="info-row"><div class="info-key">Allowed Types</div><div class="info-val">Images, PDF, TXT, CSV, ZIP, DOCX</div></div>
+          <div style="margin-top:20px;padding:12px;background:var(--bg3);border-radius:var(--radius);font-size:13px;color:var(--text2)">
+            <strong style="color:var(--yellow)">⚠ Demo Mode:</strong> If ClamAV is not running, the scanner operates in demo mode — files are still encrypted and stored, but virus scanning is simulated. Run with Docker Compose to enable real ClamAV scanning.
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- FILE DETAIL MODAL -->
+<div class="modal-backdrop" id="fileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">File Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+  const API = '';
+  let token = localStorage.getItem('sv_token');
+  let currentUser = localStorage.getItem('sv_user');
+
+  // ─── AUTH ──────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='login'&&i===0)||(tab==='register'&&i===1)));
+    document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+    document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+    clearAlert('authAlert');
+  }
+
+  function showAlert(id, msg, type='error') {
+    const el = document.getElementById(id);
+    el.className = `alert alert-${type} show`;
+    el.textContent = msg;
+  }
+  function clearAlert(id) {
+    const el = document.getElementById(id);
+    el.className = 'alert';
+    el.textContent = '';
+  }
+
+  async function doLogin() {
+    const username = document.getElementById('loginUser').value.trim();
+    const password = document.getElementById('loginPass').value;
+    if (!username || !password) return showAlert('authAlert', 'Please enter username and password');
+    document.getElementById('loginBtn').disabled = true;
+    document.getElementById('loginBtn').textContent = 'Signing in...';
+    try {
+      const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username, password}) });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message);
+      token = d.token;
+      currentUser = d.username;
+      localStorage.setItem('sv_token', token);
+      localStorage.setItem('sv_user', currentUser);
+      initApp();
+    } catch(e) {
+      showAlert('authAlert', e.message);
+    } finally {
+      document.getElementById('loginBtn').disabled = false;
+      document.getElementById('loginBtn').textContent = 'Sign In';
+    }
+  }
+
+  async function doRegister() {
+    const username = document.getElementById('regUser').value.trim();
+    const password = document.getElementById('regPass').value;
+    if (!username || !password) return showAlert('authAlert', 'Please fill all fields');
+    try {
+      const r = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username, password}) });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.message);
+      showAlert('authAlert', 'Account created! Please sign in.', 'success');
+      setTimeout(() => switchTab('login'), 1500);
+    } catch(e) {
+      showAlert('authAlert', e.message);
+    }
+  }
+
+  function doLogout() {
+    localStorage.removeItem('sv_token');
+    localStorage.removeItem('sv_user');
+    location.reload();
+  }
+
+  function authFetch(url, opts={}) {
+    opts.headers = { ...(opts.headers||{}), 'Authorization': 'Bearer ' + token };
+    return fetch(url, opts).then(r => {
+      if (r.status === 401) { doLogout(); }
+      return r;
+    });
+  }
+
+  // ─── APP ──────────────────────────────────────────────
+  function initApp() {
+    document.getElementById('authPage').style.display = 'none';
+    document.getElementById('appPage').style.display = 'block';
+    document.getElementById('navUser').textContent = '👤 ' + currentUser;
+    loadStats();
+    loadFiles();
+    setupDrop();
+  }
+
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    if (name==='files') loadFiles();
+    if (name==='activity') loadActivity();
+    if (name==='dashboard') loadStats();
+  }
+
+  async function loadStats() {
+    try {
+      const r = await authFetch('/api/files/stats');
+      const d = await r.json();
+      if (!d.success) return;
+      const s = d.stats;
+      document.getElementById('s-total').textContent = s.total;
+      document.getElementById('s-clean').textContent = s.clean;
+      document.getElementById('s-infected').textContent = s.infected;
+      document.getElementById('s-storage').textContent = formatBytes(s.totalSizeBytes);
+
+      const badge = document.getElementById('scannerBadge');
+      badge.className = 'badge-scanner ' + (s.scannerOnline ? 'badge-online' : 'badge-demo');
+      badge.textContent = s.scannerOnline ? '● ClamAV Online' : '● Demo Mode';
+
+      // Recent activity mini
+      const mini = document.getElementById('activityMini');
+      if (!d.recentActivity.length) {
+        mini.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;text-align:center">No activity yet</div>';
+        return;
+      }
+      mini.innerHTML = d.recentActivity.map(a => `
+        <div class="activity-item">
+          <div class="activity-dot dot-${a.event}"></div>
+          <div class="activity-content">
+            <div class="activity-event">${a.original_name} — <span style="text-transform:capitalize;color:var(--text2)">${a.event}</span></div>
+            <div class="activity-detail">${a.detail || ''}</div>
+          </div>
+          <div class="activity-time">${timeAgo(a.created_at)}</div>
+        </div>`).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadFiles() {
+    try {
+      const r = await authFetch('/api/files/list');
+      const d = await r.json();
+      const tbody = document.getElementById('filesTbody');
+      if (!d.success || !d.files.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No files uploaded yet</td></tr>';
+        return;
+      }
+      tbody.innerHTML = d.files.map(f => `
+        <tr>
+          <td><span style="font-weight:600">${esc(f.original_name)}</span></td>
+          <td style="color:var(--text2)">${f.mime_type||'—'}</td>
+          <td style="color:var(--text2)">${formatBytes(f.size||0)}</td>
+          <td><span class="status status-${f.status}">${f.status}</span></td>
+          <td style="color:var(--text2)">${timeAgo(f.created_at)}</td>
+          <td>
+            <button class="btn btn-sm btn-link" onclick="viewFile('${f.uuid}')">Details</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteFile('${f.uuid}', '${esc(f.original_name)}')">Delete</button>
+          </td>
+        </tr>`).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadActivity() {
+    const container = document.getElementById('activityFull');
+    container.innerHTML = '<div class="spinner"></div>';
+    try {
+      const r = await authFetch('/api/files/stats');
+      const d = await r.json();
+      if (!d.recentActivity.length) {
+        container.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">No activity yet</div>';
+        return;
+      }
+      container.innerHTML = d.recentActivity.map(a => `
+        <div class="activity-item">
+          <div class="activity-dot dot-${a.event}"></div>
+          <div class="activity-content">
+            <div class="activity-event">${esc(a.original_name)} — <span style="text-transform:capitalize;color:var(--text2)">${a.event}</span></div>
+            <div class="activity-detail">${esc(a.detail||'')}</div>
+          </div>
+          <div class="activity-time">${timeAgo(a.created_at)}</div>
+        </div>`).join('');
+    } catch(e) { container.innerHTML = '<div style="color:var(--red)">Failed to load</div>'; }
+  }
+
+  async function viewFile(uuid) {
+    const r = await authFetch('/api/files/' + uuid);
+    const d = await r.json();
+    if (!d.success) return;
+    const f = d.file;
+    const content = document.getElementById('modalContent');
+    content.innerHTML = `
+      <div class="info-row"><div class="info-key">File Name</div><div class="info-val">${esc(f.original_name)}</div></div>
+      <div class="info-row"><div class="info-key">UUID</div><div class="info-val" style="font-size:11px;color:var(--text3)">${f.uuid}</div></div>
+      <div class="info-row"><div class="info-key">MIME Type</div><div class="info-val">${f.mime_type||'—'}</div></div>
+      <div class="info-row"><div class="info-key">Size</div><div class="info-val">${formatBytes(f.size||0)}</div></div>
+      <div class="info-row"><div class="info-key">Status</div><div class="info-val"><span class="status status-${f.status}">${f.status}</span></div></div>
+      <div class="info-row"><div class="info-key">Uploaded By</div><div class="info-val">${f.uploaded_by}</div></div>
+      <div class="info-row"><div class="info-key">Uploaded At</div><div class="info-val">${new Date(f.created_at).toLocaleString()}</div></div>
+      ${f.scanned_at ? `<div class="info-row"><div class="info-key">Scanned At</div><div class="info-val">${new Date(f.scanned_at).toLocaleString()}</div></div>` : ''}
+      ${f.viruses ? `<div class="info-row"><div class="info-key">Viruses</div><div class="info-val" style="color:var(--red)">${f.viruses}</div></div>` : ''}
+      ${f.status==='clean' ? `
+        <div style="margin-top:16px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px">Download Link</div>
+          <div class="copy-url" id="urlRow-${uuid}">
+            <span id="urlText-${uuid}">${f.signed_url||'—'}</span>
+            <button onclick="copyUrl('${uuid}')">Copy</button>
+          </div>
+          <button class="btn btn-sm btn-link" style="margin-top:8px" onclick="regenUrl('${uuid}')">↻ Regenerate URL</button>
+        </div>` : ''}
+      <div style="margin-top:20px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">Event Timeline</div>
+        ${d.logs.map(l => `
+          <div class="activity-item">
+            <div class="activity-dot dot-${l.event}"></div>
+            <div class="activity-content">
+              <div class="activity-event" style="text-transform:capitalize">${l.event}</div>
+              <div class="activity-detail">${esc(l.detail||'')}</div>
+            </div>
+            <div class="activity-time">${new Date(l.created_at).toLocaleTimeString()}</div>
+          </div>`).join('')}
+      </div>`;
+    document.getElementById('fileModal').classList.add('show');
+  }
+
+  function closeModal() { document.getElementById('fileModal').classList.remove('show'); }
+
+  async function deleteFile(uuid, name) {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    const r = await authFetch('/api/files/' + uuid, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.success) loadFiles();
+    else alert('Delete failed: ' + d.message);
+  }
+
+  async function regenUrl(uuid) {
+    const r = await authFetch('/api/files/regenerate-url/' + uuid, { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('urlText-' + uuid).textContent = d.download.url;
+    }
+  }
+
+  function copyUrl(uuid) {
+    const url = document.getElementById('urlText-' + uuid).textContent;
+    const full = window.location.origin + url;
+    navigator.clipboard.writeText(full).then(() => alert('URL copied!\n\n' + full));
+  }
+
+  // ─── UPLOAD ──────────────────────────────────────────────
+  function setupDrop() {
+    const zone = document.getElementById('dropZone');
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+    });
+  }
+
+  function handleFileSelect(e) {
+    if (e.target.files[0]) uploadFile(e.target.files[0]);
+  }
+
+  async function uploadFile(file) {
+    clearAlert('uploadAlert');
+    const progress = document.getElementById('uploadProgress');
+    const bar = document.getElementById('uploadBar');
+    const result = document.getElementById('uploadResult');
+    const info = document.getElementById('filePickerInfo');
+
+    result.style.display = 'none';
+    progress.style.display = 'block';
+    info.textContent = `Uploading: ${file.name} (${formatBytes(file.size)})`;
+
+    // Animate progress
+    let pct = 0;
+    const timer = setInterval(() => {
+      pct = Math.min(pct + 5, 85);
+      bar.style.width = pct + '%';
+    }, 200);
+
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+      const r = await authFetch('/api/files/upload', { method: 'POST', body: form });
+      const d = await r.json();
+
+      clearInterval(timer);
+      bar.style.width = '100%';
+      setTimeout(() => { progress.style.display = 'none'; bar.style.width = '0%'; }, 600);
+
+      if (d.success) {
+        showAlert('uploadAlert', `✓ "${file.name}" uploaded, encrypted, and scanned successfully!`, 'success');
+        result.style.display = 'block';
+        result.innerHTML = `
+          <strong style="color:var(--green)">✓ File Processed Successfully</strong>
+          ${d.demoMode ? '<span class="badge-scanner badge-demo" style="margin-left:8px">Demo Scan</span>' : '<span class="badge-scanner badge-online" style="margin-left:8px">ClamAV Scanned</span>'}
+          <pre>${JSON.stringify({ uuid: d.uuid, status: d.status, size: formatBytes(d.size), downloadUrl: window.location.origin + d.download.url, expires: d.download.expires }, null, 2)}</pre>
+          <div style="margin-top:8px">
+            <button class="btn btn-sm btn-link" onclick="copyText('${window.location.origin + d.download.url}')">📋 Copy Download URL</button>
+          </div>`;
+        loadFiles();
+        loadStats();
+      } else {
+        showAlert('uploadAlert', `✗ ${d.message}${d.viruses?.length ? ': ' + d.viruses.join(', ') : ''}`, 'error');
+        result.style.display = 'none';
+      }
+    } catch(e) {
+      clearInterval(timer);
+      progress.style.display = 'none';
+      showAlert('uploadAlert', 'Upload failed: ' + e.message, 'error');
+    }
+
+    info.textContent = 'Supported: Images, PDF, TXT, CSV, ZIP, DOCX · Max 10MB';
+    document.getElementById('fileInput').value = '';
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => alert('Copied!\n' + text));
+  }
+
+  // ─── HELPERS ──────────────────────────────────────────────
+  function formatBytes(b) {
+    if (!b) return '0 B';
+    if (b < 1024) return b + ' B';
+    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+    return (b/(1024*1024)).toFixed(1) + ' MB';
+  }
+
+  function timeAgo(dt) {
+    if (!dt) return '—';
+    const s = Math.floor((Date.now() - new Date(dt)) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s/60) + 'm ago';
+    if (s < 86400) return Math.floor(s/3600) + 'h ago';
+    return new Date(dt).toLocaleDateString();
+  }
+
+  function esc(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('fileModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('fileModal')) closeModal();
+  });
+
+  // ─── INIT ──────────────────────────────────────────────
+  if (token) {
+    // Verify token is still valid
+    fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(r => r.json())
+      .then(d => { if (d.success) initApp(); else { localStorage.clear(); } })
+      .catch(() => {});
+  }
+</script>
+</body>
+</html>
