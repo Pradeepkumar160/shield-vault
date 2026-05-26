@@ -145,7 +145,7 @@ curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 
-# 2. Upload file (replace TOKEN)
+# 2. Upload file (replace TOKEN) 
 curl -X POST http://localhost:5000/api/files/upload \
   -H "Authorization: Bearer TOKEN" \
   -F "file=@yourfile.pdf"
