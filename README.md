@@ -5,7 +5,7 @@ Every file is **AES-256 encrypted** and **ClamAV scanned** before storage.
 
 ---
 
-## ✨ Features
+## ✨ Features 
 
 - 🔐 **AES-256-CBC encryption** on every uploaded file
 - 🦠 **ClamAV virus scanning** — infected files go to quarantine automatically
