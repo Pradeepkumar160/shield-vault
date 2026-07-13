@@ -1,4 +1,4 @@
-# 🛡️ ShieldVault — Secure File Upload & Virus Scanner 
+# 🛡️ ShieldVault — Secure File Upload & Virus Scanner                  
 
 A production-grade secure file upload service with a full web dashboard.
 Every file is **AES-256 encrypted** and **ClamAV scanned** before storage.
